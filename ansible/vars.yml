@@ -1,0 +1,2 @@
+passphrase: {{ lookup('ansible.builtin.password', '/mnt/data/certs/passwordfile chars=ascii_letters,digits,punctuation length=75') }}
+cert_path: /mnt/data/certs

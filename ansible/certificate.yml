@@ -1,0 +1,32 @@
+- name: Create directory for certificates
+  file:
+    path: {{ cert_path }}
+    state: directory
+     
+- name: Create private key (RSA, 4096 bits)
+  openssl_privatekey:
+    path: {{ cert_path }}/certificate.key
+
+- name: Create certificate signing request (CSR) for self-signed certificate
+  community.crypto.openssl_csr_pipe:
+    privatekey_path: {{ cert_path }}/certificate.key
+    common_name: Teradata
+    organization_name: Teradata
+    subject_alt_name:
+      - "DNS:{{ hostvars.modelops.ansible_host }}"
+  register: csr
+
+- name: Create self-signed certificate from CSR
+  community.crypto.x509_certificate:
+    path: {{ cert_path }}/certificate.pem
+    csr_content: "{{ csr.csr }}"
+    privatekey_path: {{ cert_path }}/certificate.key
+    provider: selfsigned
+
+- name: Create self-signed CA certificate from CSR
+  community.crypto.x509_certificate:
+    path: {{ cert_path }}/ca-certificate.pem
+    csr_content: "{{ ca_csr.csr }}"
+    privatekey_path: ca-certificate.key
+    privatekey_passphrase: "{{ passphrase }}"
+    provider: selfsigned

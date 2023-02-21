@@ -80,6 +80,8 @@
         enabled: true
         state: started
 
+    - include: certificate.yml
+
     - debug:
         msg: |
           Setup complete.
