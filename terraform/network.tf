@@ -33,7 +33,7 @@ resource "azurerm_network_interface" "mlopsnic" {
     name                          = "mlops-config"
     subnet_id                     = azurerm_subnet.mlopssubnet.id
     private_ip_address_allocation = "Dynamic"
-    public_ip_address_id          = azurerm_public_ip.mlopsip.id
+    #public_ip_address_id          = azurerm_public_ip.mlopsip.id
   }
 }
 
