@@ -1,0 +1,34 @@
+- name: Prepare the directory
+  file:
+    path: /mnt/data/openldap
+    state: directory
+    owner: 1001
+
+- name: Docker Python package is needed on target
+  pip:
+    name: docker
+
+
+- docker_container:
+    networks:
+      - name: aoa-network
+    network_mode: bridge
+    image: bitnami/openldap:2.6.3-debian-11-r77
+    name: openldap
+    ports:
+     - 127.0.0.1:1389:1389
+     - 127:0.0.1:1636:1636
+    env:
+            LDAP_ADMIN_USERNAME: admin
+            LDAP_ADMIN_PASSWORD: adminpassword
+            LDAP_USERS: user01,user02
+            LDAP_PASSWORDS: password1,password2
+            LDAP_ENABLE_TLS: "yes"
+            LDAP_TLS_CERT_FILE: /cert/certificate.pem
+            LDAP_TLS_KEY_FILE: /cert/certificate.key
+            LDAP_TLS_CA_FILE: /cert/ca-certificate.pem
+     # networks:
+     #     - aoa-network
+    volumes:
+            - /mnt/data/certs:/cert
+            - /mnt/data/openldap:/bitnami/openldap

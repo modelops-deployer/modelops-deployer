@@ -1,0 +1,26 @@
+version: '2'
+
+networks:
+  aoa-network:
+    driver: bridge
+services:
+  openldap:
+    image: bitnami/openldap
+    container_name: openldap
+    ports:
+      - '127.0.0.1:1389:1389'
+      - '127.0.0.1:1636:1636'
+    environment:
+      - LDAP_ADMIN_USERNAME=admin
+      - LDAP_ADMIN_PASSWORD=adminpassword
+      - LDAP_USERS=user01,user02
+      - LDAP_PASSWORDS=password1,password2
+      - LDAP_ENABLE_TLS=yes
+      - LDAP_TLS_CERT_FILE=/cert/certificate.pem
+      - LDAP_TLS_KEY_FILE=/cert/certificate.key
+      - LDAP_TLS_CA_FILE=/cert/ca-certificate.pem
+    networks:
+      - aoa-network
+    volumes:
+      - /mnt/data/certs:/cert
+      - /mnt/data/openldap:/bitnami/openldap

@@ -50,6 +50,8 @@
           - containerd.io
           - vim
           - jq
+          - openldap-clients
+          - python3-pip
         state: latest
         update_cache: true
 
@@ -81,6 +83,7 @@
         state: started
 
     - include: certificate.yml
+    - include: ldap.yml
 
     - debug:
         msg: |

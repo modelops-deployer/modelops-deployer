@@ -1,2 +1,3 @@
-passphrase: {{ lookup('ansible.builtin.password', '/mnt/data/certs/passwordfile chars=ascii_letters,digits,punctuation length=75') }}
+passphrase: "{{ lookup('ansible.builtin.password', '/tmp/passwordfile chars=ascii_letters,digits,punctuation length=75') }}"
+ca_passphrase: "{{ lookup('ansible.builtin.password', '/tmp/passwordfile_ca chars=ascii_letters,digits,punctuation length=75') }}"
 cert_path: /mnt/data/certs

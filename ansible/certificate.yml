@@ -1,32 +1,82 @@
+- include_vars: vars.yml
+
 - name: Create directory for certificates
   file:
-    path: {{ cert_path }}
+    path: "{{ cert_path }}"
     state: directory
      
-- name: Create private key (RSA, 4096 bits)
-  openssl_privatekey:
-    path: {{ cert_path }}/certificate.key
 
-- name: Create certificate signing request (CSR) for self-signed certificate
+- name: Create private key with password protection
+  community.crypto.openssl_privatekey:
+    path: "{{ cert_path }}/ca-certificate.key"
+    passphrase: "{{ ca_passphrase }}"
+    cipher: auto
+
+- name: Create certificate signing request (CSR) for CA certificate
   community.crypto.openssl_csr_pipe:
-    privatekey_path: {{ cert_path }}/certificate.key
-    common_name: Teradata
-    organization_name: Teradata
-    subject_alt_name:
-      - "DNS:{{ hostvars.modelops.ansible_host }}"
-  register: csr
-
-- name: Create self-signed certificate from CSR
-  community.crypto.x509_certificate:
-    path: {{ cert_path }}/certificate.pem
-    csr_content: "{{ csr.csr }}"
-    privatekey_path: {{ cert_path }}/certificate.key
-    provider: selfsigned
+    privatekey_path: "{{ cert_path }}/ca-certificate.key"
+    privatekey_passphrase: "{{ ca_passphrase }}"
+    common_name: Teradata CA
+    use_common_name_for_san: false  # since we do not specify SANs, don't use CN as a SAN
+    basic_constraints:
+      - 'CA:TRUE'
+    basic_constraints_critical: true
+    key_usage:
+      - keyCertSign
+    key_usage_critical: true
+  register: ca_csr
 
 - name: Create self-signed CA certificate from CSR
   community.crypto.x509_certificate:
-    path: {{ cert_path }}/ca-certificate.pem
+    path: "{{ cert_path }}/ca-certificate.pem"
     csr_content: "{{ ca_csr.csr }}"
-    privatekey_path: ca-certificate.key
-    privatekey_passphrase: "{{ passphrase }}"
+    privatekey_path: "{{ cert_path }}/ca-certificate.key"
+    privatekey_passphrase: "{{ ca_passphrase }}"
     provider: selfsigned
+
+
+- name: Create private key for new certificate on server_1
+  community.crypto.openssl_privatekey:
+    path: "{{ cert_path }}/certificate.key"
+  run_once: true
+
+- name: Create certificate signing request (CSR) for new certificate
+  community.crypto.openssl_csr_pipe:
+    privatekey_path: "{{ cert_path }}/certificate.key"
+    subject_alt_name:
+      - "DNS:{{ hostvars.modelops.ansible_host }}"
+  run_once: true
+  register: csr
+
+- name: Check whether certificate exists
+  stat:
+    path: "{{ cert_path }}/certificate.pem"
+  run_once: true
+  register: certificate_exists
+
+- name: Read existing certificate if exists
+  slurp:
+    src: "{{ cert_path }}/certificate.pem"
+  when: certificate_exists.stat.exists
+  run_once: true
+  register: certificate
+
+- name: Sign certificate with our CA
+  community.crypto.x509_certificate_pipe:
+    content: "{{ (certificate.content | b64decode) if certificate_exists.stat.exists else omit }}"
+    csr_content: "{{ csr.csr }}"
+    provider: ownca
+    ownca_path: "{{ cert_path }}/ca-certificate.pem"
+    ownca_privatekey_path: "{{ cert_path }}/ca-certificate.key"
+    ownca_privatekey_passphrase: "{{ ca_passphrase }}"
+    ownca_not_after: +365d  # valid for one year
+    ownca_not_before: "-1d"  # valid since yesterday
+  run_once: true
+  register: certificate
+
+- name: Write certificate file on server_1
+  copy:
+    dest: "{{ cert_path }}/certificate.pem"
+    content: "{{ certificate.certificate }}"
+  run_once: true
+  when: certificate is changed
