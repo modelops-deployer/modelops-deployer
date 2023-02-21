@@ -20,6 +20,7 @@ resource "azurerm_public_ip" "mlopsip" {
   location            = var.location
   resource_group_name = azurerm_resource_group.mlopsrg.name
   allocation_method   = "Static"
+  domain_name_label   = var.dns
 }
 
 
@@ -33,7 +34,7 @@ resource "azurerm_network_interface" "mlopsnic" {
     name                          = "mlops-config"
     subnet_id                     = azurerm_subnet.mlopssubnet.id
     private_ip_address_allocation = "Dynamic"
-    #public_ip_address_id          = azurerm_public_ip.mlopsip.id
+    public_ip_address_id          = azurerm_public_ip.mlopsip.id
   }
 }
 

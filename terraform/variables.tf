@@ -22,6 +22,11 @@ variable "user" {
   default = "modelops"
 }
 
+variable "dns" {
+  default = "modelops"
+}
+
 locals {
   pkey = "${path.module}/pkey"
 }
+
