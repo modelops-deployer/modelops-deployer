@@ -83,4 +83,4 @@
     - debug:
         msg: |
           Setup complete.
-          You may connect using ssh root@{{ hostvars.modelops.ansible_host }}
+          You may connect using ssh root@{{ hostvars.modelops.ansible_host }}  
