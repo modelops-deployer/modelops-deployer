@@ -41,4 +41,4 @@ jobs:
     - name: Run Ansible Playbook
       working-directory: ansible
       run: |
-        ./deploy.sh
+        bash ./deploy.sh
