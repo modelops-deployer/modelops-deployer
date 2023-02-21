@@ -1,0 +1,86 @@
+- hosts: modelops
+  tasks:
+    - name: Identify data disk path
+      stat:
+        path:   /dev/disk/azure/scsi1/lun10
+      register: link
+    - name: Format the data disk if not done
+      filesystem:
+        dev: "{{ link.stat.lnk_source }}"
+        fstype: xfs
+        force: no
+    - name: Mount the disk
+      mount:
+        path: /mnt/data
+        src: "{{ link.stat.lnk_source }}"
+        fstype: xfs
+        state: mounted 
+        boot: true
+    - name: Disable SELinux
+      selinux:
+        state: disabled
+    - name: TZ
+      timezone:
+        name: CET
+    - name: Grant access to admins
+      authorized_key:
+        user: root
+        state: present
+        key: "{{ lookup('file', 'keys')}}"
+    - name: Add signing key
+      ansible.builtin.rpm_key:
+        key: "https://download.docker.com/linux/centos/gpg"
+        state: present
+
+    - name: Add repository into repo.d list
+      ansible.builtin.yum_repository:
+        name: docker
+        description: docker repository
+        baseurl: "https://download.docker.com/linux/centos/$releasever/$basearch/stable"
+        enabled: true
+        gpgcheck: true
+        gpgkey: "https://download.docker.com/linux/centos/gpg"
+
+    - name: Install Docker
+      ansible.builtin.yum:
+        name:
+          - docker-ce
+          - docker-compose-plugin
+          - docker-ce-cli
+          - containerd.io
+          - vim
+          - jq
+        state: latest
+        update_cache: true
+
+    - name: Prepare directories
+      file:
+        path: "{{ item }}"
+        state: directory
+      with_items:
+      - /mnt/data/varlibdocker
+      - /mnt/data/modelops
+
+    - name: Create modelops directory
+      file:
+        state: link
+        src: /mnt/data/modelops
+        dest: /opt/teradata
+
+
+    - name: Set up Docker directory
+      copy:
+        content: |
+          {  "log-driver": "journald",  "data-root": "/mnt/data/varlibdocker"}
+        dest: /etc/docker/daemon.json
+
+    - name: Start Docker
+      ansible.builtin.service:
+        name: "docker"
+        enabled: true
+        state: started
+
+    - debug:
+        msg: |
+          Setup complete.
+          You may connect using ssh root@{{ hostvars.modelops.ansible_host }}

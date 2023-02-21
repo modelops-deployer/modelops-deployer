@@ -1,0 +1,43 @@
+name: Destroy Infrastructure
+
+on:
+  workflow_dispatch:
+
+jobs:
+  destroy:
+    runs-on: ubuntu-latest
+
+    env:
+      #TF_LOG: TRACE
+      ARM_CLIENT_ID: '${{ secrets.ARM_CLIENT_ID }}'
+      ARM_CLIENT_SECRET: '${{ secrets.ARM_CLIENT_SECRET }}'
+      ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+      ARM_TENANT_ID: '${{ secrets.ARM_TENANT_ID }}'
+    
+    defaults:
+      run:
+        shell: bash
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+    
+    - name: Set up Terraform
+      uses: hashicorp/setup-terraform@v1
+      with:
+        terraform_wrapper: false
+
+    - name: Terraform Init
+      run: terraform init -backend-config backend.conf
+      working-directory: terraform
+
+    - name: Identify resources to destroy
+      run: terraform state list | egrep -v 'disk120|mlopsrg' | tr '\n' ' ' | tee tmp_file
+      working-directory: terraform
+
+    - name: Terraform Destroy except resources with prevent_destroy
+      run: |
+        terraform destroy -auto-approve \
+        $(awk '{for(i=1;i<=NF;i++) print " -target "$i}' tmp_file \
+        | tr '\n' ' ')
+      working-directory: terraform
+
