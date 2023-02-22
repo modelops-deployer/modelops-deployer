@@ -8,6 +8,10 @@
   pip:
     name: docker
 
+- name: Prepare the network
+  docker_network:
+    name: aoa-network
+    driver: bridge
 
 - docker_container:
     networks:
